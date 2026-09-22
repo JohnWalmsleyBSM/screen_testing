@@ -1,40 +1,66 @@
 use embedded_graphics::{
+    mono_font::{ascii::FONT_10X20, MonoTextStyle},
     pixelcolor::BinaryColor,
     prelude::*,
-    primitives::{Circle, Line, Rectangle, PrimitiveStyle},
-    mono_font::{ascii::FONT_6X9, MonoTextStyle},
-    text::Text,
+    primitives::{Arc, PrimitiveStyleBuilder, StrokeAlignment},
+    text::{Alignment, Baseline, Text, TextStyleBuilder},
 };
-use embedded_graphics_simulator::{BinaryColorTheme, SimulatorDisplay, Window, OutputSettingsBuilder};
+use embedded_graphics_simulator::{
+    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+};
+use std::{thread, time::Duration};
 
-fn main() -> Result<(), core::convert::Infallible> {
-    let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(128, 64));
+fn main() -> Result<(), std::convert::Infallible> {
+    // Create a new simulator display with 64x64 pixels.
+    let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
 
-    let line_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-    let text_style = MonoTextStyle::new(&FONT_6X9, BinaryColor::On);
-
-    Circle::new(Point::new(72, 8), 48)
-        .into_styled(line_style)
-        .draw(&mut display)?;
-
-    Line::new(Point::new(48, 16), Point::new(8, 16))
-        .into_styled(line_style)
-        .draw(&mut display)?;
-
-    Line::new(Point::new(48, 16), Point::new(64, 32))
-        .into_styled(line_style)
-        .draw(&mut display)?;
-
-    Rectangle::new(Point::new(79, 15), Size::new(34, 34))
-        .into_styled(line_style)
-        .draw(&mut display)?;
-
-    Text::new("Hello World!", Point::new(5, 5), text_style).draw(&mut display)?;
+    // Create styles used by the drawing operations.
+    let arc_stroke = PrimitiveStyleBuilder::new()
+        .stroke_color(BinaryColor::On)
+        .stroke_width(5)
+        .stroke_alignment(StrokeAlignment::Inside)
+        .build();
+    let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+    let text_style = TextStyleBuilder::new()
+        .baseline(Baseline::Middle)
+        .alignment(Alignment::Center)
+        .build();
 
     let output_settings = OutputSettingsBuilder::new()
         .theme(BinaryColorTheme::OledBlue)
         .build();
-    Window::new("Hello World", &output_settings).show_static(&display);
+    let mut window = Window::new("Progress", &output_settings);
 
-    Ok(())
+    // The current progress percentage
+    let mut progress = 78;
+
+    'running: loop {
+        display.clear(BinaryColor::Off)?;
+
+        let sweep = progress as f32 * 360.0 / 100.0;
+
+        // Draw an arc with a 5px wide stroke.
+        Arc::new(Point::new(2, 2), 64 - 4, 90.0.deg(), sweep.deg())
+            .into_styled(arc_stroke)
+            .draw(&mut display)?;
+
+        // Draw centered text.
+        let text = format!("{}%", progress);
+        Text::with_text_style(
+            &text,
+            display.bounding_box().center(),
+            character_style,
+            text_style,
+        )
+        .draw(&mut display)?;
+
+        window.update(&display);
+
+        if window.events().any(|e| e == SimulatorEvent::Quit) {
+            break 'running Ok(());
+        }
+        thread::sleep(Duration::from_millis(50));
+
+        progress = (progress + 1) % 101;
+    }
 }
