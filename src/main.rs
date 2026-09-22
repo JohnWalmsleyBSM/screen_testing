@@ -17,7 +17,7 @@ fn main() -> Result<(), std::convert::Infallible> {
     // Create styles used by the drawing operations.
     let arc_stroke = PrimitiveStyleBuilder::new()
         .stroke_color(BinaryColor::On)
-        .stroke_width(5)
+        .stroke_width(6)
         .stroke_alignment(StrokeAlignment::Inside)
         .build();
     let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
@@ -38,21 +38,42 @@ fn main() -> Result<(), std::convert::Infallible> {
         display.clear(BinaryColor::Off)?;
 
         let sweep = progress as f32 * 360.0 / 100.0;
+        let remaining = ( 101 - progress ) / 10 as u16;
 
         // Draw an arc with a 5px wide stroke.
-        Arc::new(Point::new(2, 2), 64 - 4, 90.0.deg(), sweep.deg())
+        let arc = Arc::with_center(Point::new(32, 31), 64 - 4, 90.0.deg(), sweep.deg())
             .into_styled(arc_stroke)
             .draw(&mut display)?;
 
-        // Draw centered text.
+        // Draw centered text for arc
         let text = format!("{}%", progress);
-        Text::with_text_style(
+        let text_block = Text::with_text_style(
             &text,
-            display.bounding_box().center(),
+            Point::new(32, 31),
             character_style,
             text_style,
-        )
-        .draw(&mut display)?;
+        );
+        text_block.draw(&mut display)?;
+
+        // Draw DOSE text
+        let dose_text = "DOSE";
+        let dose_text_block = Text::with_text_style(
+            &dose_text,
+            Point::new(96, 15),
+            character_style,
+            text_style,
+        );
+        dose_text_block.draw(&mut display)?;
+
+        // Draw breaths remaining text
+        let est_remaining_text = format!("{} LEFT", remaining);
+        let est_remaining_text_block = Text::with_text_style(
+            &est_remaining_text,
+            Point::new(96, 47),
+            character_style,
+            text_style,
+        );
+        est_remaining_text_block.draw(&mut display)?;
 
         window.update(&display);
 
