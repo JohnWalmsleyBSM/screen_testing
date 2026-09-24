@@ -31,7 +31,8 @@ fn main() -> Result<(), std::convert::Infallible> {
         .theme(BinaryColorTheme::OledBlue)
         .build();
     let mut window = Window::new("Progress", &output_settings);
-
+    // Otherwise, calls to window.events() will panic.
+    window.update(&display);
     // The current progress percentage
     let mut progress = 78;
 
