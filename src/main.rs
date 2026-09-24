@@ -6,8 +6,9 @@ use embedded_graphics::{
     text::{Alignment, Baseline, Text, TextStyleBuilder},
 };
 use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window
 };
+use embedded_graphics_simulator::sdl2::Keycode;
 use std::{thread, time::Duration};
 
 fn main() -> Result<(), std::convert::Infallible> {
@@ -17,7 +18,7 @@ fn main() -> Result<(), std::convert::Infallible> {
     // Create styles used by the drawing operations.
     let arc_stroke = PrimitiveStyleBuilder::new()
         .stroke_color(BinaryColor::On)
-        .stroke_width(6)
+        .stroke_width(8)
         .stroke_alignment(StrokeAlignment::Inside)
         .build();
     let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
@@ -55,15 +56,30 @@ fn main() -> Result<(), std::convert::Infallible> {
         );
         text_block.draw(&mut display)?;
 
-        // Draw DOSE text
-        let dose_text = "DOSE";
-        let dose_text_block = Text::with_text_style(
-            &dose_text,
-            Point::new(96, 15),
-            character_style,
-            text_style,
-        );
-        dose_text_block.draw(&mut display)?;
+        for event in window.events(){
+
+        }
+
+        // for event in window.events(){
+        //     match event{
+        //         SimulatorEvent::KeyDown { keycode, keymod, repeat } => { 
+        //             match keycode{ 
+        //                 Keycode::Space => {// Draw DOSE text
+        //                     let dose_text = "DOSE";
+        //                     let dose_text_block = Text::with_text_style(
+        //                         &dose_text,
+        //                         Point::new(96, 15),
+        //                         character_style,
+        //                         text_style,
+        //                     );
+        //                     dose_text_block.draw(&mut display)?;
+        //                 },
+        //                 _ => { }
+        //             }
+        //         },
+        //         _ => {}
+        //     }
+        // }
 
         // Draw breaths remaining text
         let est_remaining_text = format!("{} LEFT", remaining);
