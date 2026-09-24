@@ -56,6 +56,11 @@ fn main() -> Result<(), std::convert::Infallible> {
         );
         text_block.draw(&mut display)?;
 
+        // commenting this line will allow code to run. Error is:
+        // thread 'main' (15355787) panicked at /Users/johnwalmsley/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embedded-graphics-simulator-0.7.0/src/window/mod.rs:172:14:
+        // called `Option::unwrap()` on a `None` value
+        // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
         for event in window.events(){
 
         }
