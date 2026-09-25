@@ -115,6 +115,41 @@ where
         Ok(())
     }
 
+// Draws the waiting state
+fn draw_waiting_state<D>(target: &mut D ) -> Result<(), D::Error>
+where
+    D: DrawTarget<Color = BinaryColor>,
+    {
+        // Create styles used by the drawing operations.
+        // TODO: Pass in or make constant
+        let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+        let text_style = TextStyleBuilder::new()
+            .baseline(Baseline::Middle)
+            .alignment(Alignment::Center)
+            .build();
+        target.clear(BinaryColor::Off)?;  
+    
+        let dose_text = "NEXT DOSE";
+        let dose_text_block = Text::with_text_style(
+            &dose_text,
+            Point::new(64, 15),
+            character_style,
+            text_style,
+        );
+        dose_text_block.draw(target)?;
+    
+        // Draw breaths remaining text
+        let est_remaining_text = format!("{} HR", 1);
+        let est_remaining_text_block = Text::with_text_style(
+            &est_remaining_text,
+            Point::new(64, 47),
+            character_style,
+            text_style,
+        );
+        est_remaining_text_block.draw(target)?;
+        Ok(())
+    }
+
 /// Draws a blank screen
 fn draw_off_state<D>(target: &mut D ) -> Result<(), D::Error>
 where
@@ -168,21 +203,18 @@ fn main() -> Result<(), std::convert::Infallible> {
                             match current_state{
                                 States::Off => { current_state = States::Startup;},
                                 States::Startup => { }, // Startup cannot be interrupted
-                                States::Dosing => { current_state = States::Off; // Turn off on spacebar press
-                                                    startup_timer = 0;
-                                                    progress = 0;
-                                                }
-                                States::DoseComplete => { current_state = States::Dosing }, // Send back to Dose State for now
+                                States::Waiting => { current_state = States::Dosing },
+                                States::Dosing => { }, // Button does nothing until dose complete
+                                States::DoseComplete => { current_state = States::Waiting }, // Send back to Dose State for now
                                 _ => { current_state = States::Off;}
                             }
                         },
                         Keycode::B =>{
                             match current_state{
-                                States::Dosing => {progress = progress+1;},
+                                States::Dosing => {progress = progress+2;},
                                 _ => {},
                             }
                         }
-                        //TODO: B = breathing
                         //TODO: hold 3s for off
                         _ => {},
                     }
@@ -196,6 +228,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         match current_state{ 
             States::Off => { draw_off_state(&mut display); },
             States::Startup => { draw_startup_state(&mut display); },
+            States::Waiting => { draw_waiting_state(&mut display); },
             States::Dosing => { draw_dosing_state(&mut display, &progress); },
             States::DoseComplete => { draw_dose_complete_state(&mut display); },
             _ =>{},
@@ -208,7 +241,7 @@ fn main() -> Result<(), std::convert::Infallible> {
             States::Startup =>{ startup_timer = startup_timer + 1;
                                 // When timer expires, go to dosing and reset timer.
                                 if startup_timer == 10{
-                                    current_state = States::Dosing;
+                                    current_state = States::Waiting;
                                     startup_timer = 0;
                                 };
                             },
