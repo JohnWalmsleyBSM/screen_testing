@@ -93,14 +93,20 @@ fn main() -> Result<(), std::convert::Infallible> {
         );
         text_block.draw(&mut display)?;
 
-        let dose_text = "DOSE";
-        let dose_text_block = Text::with_text_style(
-            &dose_text,
-            Point::new(96, 15),
-            character_style,
-            text_style,
-        );
-        dose_text_block.draw(&mut display)?;
+        match current_state{ 
+            States::Off => {},
+            States::Startup => {
+                let dose_text = "DOSE";
+                let dose_text_block = Text::with_text_style(
+                    &dose_text,
+                    Point::new(96, 15),
+                    character_style,
+                    text_style,
+                );
+                dose_text_block.draw(&mut display)?;
+            },
+            _ =>{},
+        }
  
         // Draw breaths remaining text
         let est_remaining_text = format!("{} LEFT", remaining);
@@ -117,7 +123,6 @@ fn main() -> Result<(), std::convert::Infallible> {
         // let image = Image::new(&bmp, Point::new(0, 0));
         // // Display the image
         // image.draw(&mut display)?;
-
 
         window.update(&display);
 
