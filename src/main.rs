@@ -64,6 +64,30 @@ enum States {
 //     progress = (progress + 1) % 101;
 // }
 
+/// Draws a blank screen
+fn draw_off_state<D>(target: &mut D ) -> Result<(), D::Error>
+where
+    D: DrawTarget<Color = BinaryColor>,
+    {
+        target.clear(BinaryColor::Off)?;
+        Ok(())
+    }
+
+// Draws the BridgeSource logo
+fn draw_startup_state<D>(target: &mut D ) -> Result<(), D::Error>
+where
+    D: DrawTarget<Color = BinaryColor>,
+    {
+        target.clear(BinaryColor::Off)?;
+        //draw image
+        let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
+        let image = Image::new(&bmp, Point::new(0, 0));
+        // Display the image
+        image.draw(target)?;
+        Ok(())
+    }
+
+// main
 fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display with 128x64 pixels.
     let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
@@ -116,17 +140,11 @@ fn main() -> Result<(), std::convert::Infallible> {
                 _ => {}
             }
         }
+        
         // Update screen based on current state
-
         match current_state{ 
-            States::Off => { display.clear(BinaryColor::Off)?; },
-            States::Startup => {
-                //draw image
-                let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
-                let image = Image::new(&bmp, Point::new(0, 0));
-                // Display the image
-                image.draw(&mut display)?;
-            },
+            States::Off => { draw_off_state(&mut display); },
+            States::Startup => { draw_startup_state(&mut display); },
             _ =>{},
         }
  
@@ -138,7 +156,7 @@ fn main() -> Result<(), std::convert::Infallible> {
                                 if startup_timer == 10{
                                     current_state = States::Off;
                                     startup_timer = 0;
-                                }
+                                };
                             },
                             _ => {},
         }
