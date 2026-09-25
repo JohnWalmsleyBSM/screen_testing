@@ -1,6 +1,7 @@
 use embedded_graphics::{
     mono_font::{ascii::FONT_10X20, MonoTextStyle},
     pixelcolor::BinaryColor,
+    image::Image,
     prelude::*,
     primitives::{Arc, PrimitiveStyleBuilder, StrokeAlignment},
     text::{Alignment, Baseline, Text, TextStyleBuilder},
@@ -9,10 +10,11 @@ use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window
 };
 use embedded_graphics_simulator::sdl2::Keycode;
+use tinybmp::Bmp;
 use std::{thread, time::Duration};
 
 fn main() -> Result<(), std::convert::Infallible> {
-    // Create a new simulator display with 64x64 pixels.
+    // Create a new simulator display with 128x64 pixels.
     let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
 
     // Create styles used by the drawing operations.
@@ -87,6 +89,13 @@ fn main() -> Result<(), std::convert::Infallible> {
             text_style,
         );
         est_remaining_text_block.draw(&mut display)?;
+
+        // draw image over the top...
+        let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
+        let image = Image::new(&bmp, Point::new(0, 0));
+        // Display the image
+        image.draw(&mut display)?;
+
 
         window.update(&display);
 
