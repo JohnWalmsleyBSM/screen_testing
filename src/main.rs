@@ -41,6 +41,7 @@ where
         target.clear(BinaryColor::Off)?;
 
         let sweep = *progress as f32 * 360.0 / 100.0;
+        // TODO calculate breaths remaining based on duration of last breath.
         let remaining = ( 101 - progress ) / 10 as u16;
     
         // Draw an arc with a 5px wide stroke.
@@ -72,6 +73,41 @@ where
         let est_remaining_text_block = Text::with_text_style(
             &est_remaining_text,
             Point::new(96, 47),
+            character_style,
+            text_style,
+        );
+        est_remaining_text_block.draw(target)?;
+        Ok(())
+    }
+
+    // Draws the dose complete state
+fn draw_dose_complete_state<D>(target: &mut D ) -> Result<(), D::Error>
+where
+    D: DrawTarget<Color = BinaryColor>,
+    {
+        // Create styles used by the drawing operations.
+        // TODO: Pass in or make constant
+        let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+        let text_style = TextStyleBuilder::new()
+            .baseline(Baseline::Middle)
+            .alignment(Alignment::Center)
+            .build();
+        target.clear(BinaryColor::Off)?;  
+    
+        let dose_text = "DOSE";
+        let dose_text_block = Text::with_text_style(
+            &dose_text,
+            Point::new(64, 15),
+            character_style,
+            text_style,
+        );
+        dose_text_block.draw(target)?;
+    
+        // Draw breaths remaining text
+        let est_remaining_text = "COMPLETE";
+        let est_remaining_text_block = Text::with_text_style(
+            &est_remaining_text,
+            Point::new(64, 47),
             character_style,
             text_style,
         );
@@ -132,13 +168,20 @@ fn main() -> Result<(), std::convert::Infallible> {
                             match current_state{
                                 States::Off => { current_state = States::Startup;},
                                 States::Startup => { }, // Startup cannot be interrupted
-                                States::Dosing => { current_state = States::Off;
+                                States::Dosing => { current_state = States::Off; // Turn off on spacebar press
                                                     startup_timer = 0;
                                                     progress = 0;
                                                 }
+                                States::DoseComplete => { current_state = States::Dosing }, // Send back to Dose State for now
                                 _ => { current_state = States::Off;}
                             }
                         },
+                        Keycode::B =>{
+                            match current_state{
+                                States::Dosing => {progress = progress+1;},
+                                _ => {},
+                            }
+                        }
                         //TODO: B = breathing
                         //TODO: hold 3s for off
                         _ => {},
@@ -154,12 +197,13 @@ fn main() -> Result<(), std::convert::Infallible> {
             States::Off => { draw_off_state(&mut display); },
             States::Startup => { draw_startup_state(&mut display); },
             States::Dosing => { draw_dosing_state(&mut display, &progress); },
+            States::DoseComplete => { draw_dose_complete_state(&mut display); },
             _ =>{},
         }
  
         window.update(&display);
 
-        // Update timers
+        // Update timers, and states if transition reached.
         match current_state{
             States::Startup =>{ startup_timer = startup_timer + 1;
                                 // When timer expires, go to dosing and reset timer.
@@ -168,7 +212,11 @@ fn main() -> Result<(), std::convert::Infallible> {
                                     startup_timer = 0;
                                 };
                             },
-            States::Dosing => { progress = (progress + 1) % 101; }
+            States::Dosing =>{ if progress == 100 {
+                                    current_state = States::DoseComplete;
+                                    progress = 0;
+                                };
+                            },
             _ => {},
         }
         
