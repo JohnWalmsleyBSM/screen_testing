@@ -178,7 +178,7 @@ fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display with 128x64 pixels.
     let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
     let output_settings = OutputSettingsBuilder::new()
-        .theme(BinaryColorTheme::OledBlue)
+        .theme(BinaryColorTheme::Default)
         .build();
     let mut window = Window::new("Progress", &output_settings);
        
@@ -199,7 +199,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         // Get a keydown event to control state
         for event in window.events(){
             match event{
-                SimulatorEvent::KeyDown { keycode, keymod, repeat } => { 
+                SimulatorEvent::KeyDown { keycode, .. } => { 
                     match keycode{
                         // Button press down starts timer - >~3s powers off
                         Keycode::Space => {
@@ -214,7 +214,7 @@ fn main() -> Result<(), std::convert::Infallible> {
                         _ => {},
                     }
                 },
-                SimulatorEvent::KeyUp { keycode, keymod, repeat } => {
+                SimulatorEvent::KeyUp { keycode, .. } => {
                     match keycode{
                         Keycode::Space => { // releasing button stops timer and resets
                             power_off_timer_enable = false;
@@ -272,7 +272,6 @@ fn main() -> Result<(), std::convert::Infallible> {
         // Update power off timer if enabled.
         if power_off_timer_enable {
             power_off_timer = power_off_timer + 1;
-            println!( "{}", format!("{}",power_off_timer) );
             if power_off_timer > 10{
                 power_off_timer_complete = true;
             }
