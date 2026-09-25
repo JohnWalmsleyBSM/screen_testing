@@ -3,8 +3,8 @@ use embedded_graphics::{
     pixelcolor::BinaryColor,
     image::Image,
     prelude::*,
-    primitives::{Arc, PrimitiveStyle, PrimitiveStyleBuilder, StrokeAlignment},
-    text::{Alignment, Baseline, Text, TextStyle, TextStyleBuilder},
+    primitives::{Arc, PrimitiveStyleBuilder, StrokeAlignment},
+    text::{Alignment, Baseline, Text, TextStyleBuilder},
 };
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window
@@ -42,10 +42,10 @@ where
 
         let sweep = *progress as f32 * 360.0 / 100.0;
         // TODO calculate breaths remaining based on duration of last breath.
-        let remaining = ( 101 - progress ) / 10 as u16;
+        let remaining = ( 101 - progress ) / 12 as u16;
     
         // Draw an arc with a 5px wide stroke.
-        let arc = Arc::with_center(Point::new(32, 31), 64 - 4, 90.0.deg(), sweep.deg())
+        let _arc = Arc::with_center(Point::new(32, 31), 64 - 4, 90.0.deg(), sweep.deg())
             .into_styled(arc_stroke)
             .draw(target)?;
     
@@ -185,6 +185,9 @@ fn main() -> Result<(), std::convert::Infallible> {
     // Initialize timers
     let mut progress: u16 = 0;
     let mut startup_timer: u16 = 0;
+    let mut power_off_timer = 0;
+    let mut power_off_timer_enable = false;
+    let mut power_off_timer_complete = false;
 
     // Device starts in the Off state
     let mut current_state = States::Off;
@@ -198,26 +201,43 @@ fn main() -> Result<(), std::convert::Infallible> {
             match event{
                 SimulatorEvent::KeyDown { keycode, keymod, repeat } => { 
                     match keycode{
-                        // Button press changes state
+                        // Button press down starts timer - >~3s powers off
                         Keycode::Space => {
-                            match current_state{
-                                States::Off => { current_state = States::Startup;},
-                                States::Startup => { }, // Startup cannot be interrupted
-                                States::Waiting => { current_state = States::Dosing },
-                                States::Dosing => { }, // Button does nothing until dose complete
-                                States::DoseComplete => { current_state = States::Waiting }, // Send back to Dose State for now
-                                _ => { current_state = States::Off;}
-                            }
+                            power_off_timer_enable = true;
                         },
-                        Keycode::B =>{
+                        Keycode::B =>{ // Breathing
                             match current_state{
-                                States::Dosing => {progress = progress+2;},
+                                States::Dosing => {progress = progress+2; },
                                 _ => {},
                             }
-                        }
-                        //TODO: hold 3s for off
+                        },
                         _ => {},
                     }
+                },
+                SimulatorEvent::KeyUp { keycode, keymod, repeat } => {
+                    match keycode{
+                        Keycode::Space => { // releasing button stops timer and resets
+                            power_off_timer_enable = false;
+                            power_off_timer = 0;
+                            if power_off_timer_complete { // power off timer expired due to long spacebar press
+                                current_state = States::Off;
+                                startup_timer = 0;
+                                progress = 0;
+                                power_off_timer_complete = false;
+                            }
+                            else { // State transition
+                                match current_state{
+                                    States::Off => { current_state = States::Startup;},
+                                    States::Startup => { }, // Startup cannot be interrupted
+                                    States::Waiting => { current_state = States::Dosing },
+                                    States::Dosing => { }, // Button does nothing until dose complete
+                                    States::DoseComplete => { current_state = States::Waiting }, // Send back to Dose State for now
+                                }
+                            }
+                        },
+                        _ => {},
+                    };
+                    
                 },
                 SimulatorEvent::Quit => { break 'running Ok(()); },
                 _ => {}
@@ -231,11 +251,8 @@ fn main() -> Result<(), std::convert::Infallible> {
             States::Waiting => { draw_waiting_state(&mut display); },
             States::Dosing => { draw_dosing_state(&mut display, &progress); },
             States::DoseComplete => { draw_dose_complete_state(&mut display); },
-            _ =>{},
         }
  
-        window.update(&display);
-
         // Update timers, and states if transition reached.
         match current_state{
             States::Startup =>{ startup_timer = startup_timer + 1;
@@ -252,6 +269,16 @@ fn main() -> Result<(), std::convert::Infallible> {
                             },
             _ => {},
         }
+        // Update power off timer if enabled.
+        if power_off_timer_enable {
+            power_off_timer = power_off_timer + 1;
+            println!( "{}", format!("{}",power_off_timer) );
+            if power_off_timer > 10{
+                power_off_timer_complete = true;
+            }
+        }
+
+        window.update(&display);
         
         thread::sleep(Duration::from_millis(50));
 
