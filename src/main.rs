@@ -13,6 +13,14 @@ use embedded_graphics_simulator::sdl2::Keycode;
 use tinybmp::Bmp;
 use std::{thread, time::Duration};
 
+enum States {
+    Off,
+    Startup,
+    Waiting,
+    Dosing,
+    DoseComplete
+}
+
 fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display with 128x64 pixels.
     let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
@@ -36,9 +44,35 @@ fn main() -> Result<(), std::convert::Infallible> {
     // Otherwise, calls to window.events() will panic.
     window.update(&display);
     // The current progress percentage
-    let mut progress = 78;
+    let mut progress = 0;
+
+    // Device starts in the Off state
+    let mut current_state = States::Off;
 
     'running: loop {
+        // Get a keydown event to control state
+        for event in window.events(){
+            match event{
+                SimulatorEvent::KeyDown { keycode, keymod, repeat } => { 
+                    match keycode{
+                        // Button press changes state
+                        Keycode::Space => {
+                            match current_state{
+                                States::Off => { current_state = States::Startup;},
+                                States::Startup => { current_state = States::Off;},
+                                _ => { current_state = States::Off;}
+                            }
+                        },
+                        //TODO: B = breathing
+                        _ => {},
+                    }
+                },
+                SimulatorEvent::Quit => { break 'running Ok(()); },
+                _ => {}
+            }
+        }
+        // Update screen based on current state
+
         display.clear(BinaryColor::Off)?;
 
         let sweep = progress as f32 * 360.0 / 100.0;
@@ -59,27 +93,15 @@ fn main() -> Result<(), std::convert::Infallible> {
         );
         text_block.draw(&mut display)?;
 
-        for event in window.events(){
-            match event{
-                SimulatorEvent::KeyDown { keycode, keymod, repeat } => { 
-                    match keycode{ 
-                        Keycode::Space => {// Draw DOSE text
-                            let dose_text = "DOSE";
-                            let dose_text_block = Text::with_text_style(
-                                &dose_text,
-                                Point::new(96, 15),
-                                character_style,
-                                text_style,
-                            );
-                            dose_text_block.draw(&mut display)?;
-                        },
-                        _ => { }
-                    }
-                },
-                _ => {}
-            }
-        }
-
+        let dose_text = "DOSE";
+        let dose_text_block = Text::with_text_style(
+            &dose_text,
+            Point::new(96, 15),
+            character_style,
+            text_style,
+        );
+        dose_text_block.draw(&mut display)?;
+ 
         // Draw breaths remaining text
         let est_remaining_text = format!("{} LEFT", remaining);
         let est_remaining_text_block = Text::with_text_style(
@@ -91,17 +113,17 @@ fn main() -> Result<(), std::convert::Infallible> {
         est_remaining_text_block.draw(&mut display)?;
 
         // draw image over the top...
-        let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
-        let image = Image::new(&bmp, Point::new(0, 0));
-        // Display the image
-        image.draw(&mut display)?;
+        // let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
+        // let image = Image::new(&bmp, Point::new(0, 0));
+        // // Display the image
+        // image.draw(&mut display)?;
 
 
         window.update(&display);
 
-        if window.events().any(|e| e == SimulatorEvent::Quit) {
-            break 'running Ok(());
-        }
+        // if window.events().any(|e| e == SimulatorEvent::Quit) {
+        //     break 'running Ok(());
+        // }
         thread::sleep(Duration::from_millis(50));
 
         progress = (progress + 1) % 101;
