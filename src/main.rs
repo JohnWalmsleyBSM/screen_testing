@@ -21,6 +21,49 @@ enum States {
     DoseComplete
 }
 
+// Saving code for dosing state, function implementation TBD
+// fn drawDosingState() -> {
+//     display.clear(BinaryColor::Off)?;
+
+//     let sweep = progress as f32 * 360.0 / 100.0;
+//     let remaining = ( 101 - progress ) / 10 as u16;
+
+//     // Draw an arc with a 5px wide stroke.
+//     let arc = Arc::with_center(Point::new(32, 31), 64 - 4, 90.0.deg(), sweep.deg())
+//         .into_styled(arc_stroke)
+//         .draw(&mut display)?;
+
+//     // Draw centered text for arc
+//     let text = format!("{}%", progress);
+//     let text_block = Text::with_text_style(
+//         &text,
+//         Point::new(32, 31),
+//         character_style,
+//         text_style,
+//     );
+//     text_block.draw(&mut display)?;
+
+//     let dose_text = "DOSE";
+//     let dose_text_block = Text::with_text_style(
+//         &dose_text,
+//         Point::new(96, 15),
+//         character_style,
+//         text_style,
+//     );
+//     dose_text_block.draw(&mut display)?;
+
+//     // Draw breaths remaining text
+//     let est_remaining_text = format!("{} LEFT", remaining);
+//     let est_remaining_text_block = Text::with_text_style(
+//         &est_remaining_text,
+//         Point::new(96, 47),
+//         character_style,
+//         text_style,
+//     );
+//     est_remaining_text_block.draw(&mut display)?;
+//     progress = (progress + 1) % 101;
+// }
+
 fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display with 128x64 pixels.
     let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(128, 64));
@@ -45,6 +88,7 @@ fn main() -> Result<(), std::convert::Infallible> {
     window.update(&display);
     // The current progress percentage
     let mut progress = 0;
+    let mut startup_timer = 0;
 
     // Device starts in the Off state
     let mut current_state = States::Off;
@@ -59,11 +103,12 @@ fn main() -> Result<(), std::convert::Infallible> {
                         Keycode::Space => {
                             match current_state{
                                 States::Off => { current_state = States::Startup;},
-                                States::Startup => { current_state = States::Off;},
+                                States::Startup => { }, // Startup cannot be interrupted
                                 _ => { current_state = States::Off;}
                             }
                         },
                         //TODO: B = breathing
+                        //TODO: hold 3s for off
                         _ => {},
                     }
                 },
@@ -73,64 +118,32 @@ fn main() -> Result<(), std::convert::Infallible> {
         }
         // Update screen based on current state
 
-        display.clear(BinaryColor::Off)?;
-
-        let sweep = progress as f32 * 360.0 / 100.0;
-        let remaining = ( 101 - progress ) / 10 as u16;
-
-        // Draw an arc with a 5px wide stroke.
-        let arc = Arc::with_center(Point::new(32, 31), 64 - 4, 90.0.deg(), sweep.deg())
-            .into_styled(arc_stroke)
-            .draw(&mut display)?;
-
-        // Draw centered text for arc
-        let text = format!("{}%", progress);
-        let text_block = Text::with_text_style(
-            &text,
-            Point::new(32, 31),
-            character_style,
-            text_style,
-        );
-        text_block.draw(&mut display)?;
-
         match current_state{ 
-            States::Off => {},
+            States::Off => { display.clear(BinaryColor::Off)?; },
             States::Startup => {
-                let dose_text = "DOSE";
-                let dose_text_block = Text::with_text_style(
-                    &dose_text,
-                    Point::new(96, 15),
-                    character_style,
-                    text_style,
-                );
-                dose_text_block.draw(&mut display)?;
+                //draw image
+                let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
+                let image = Image::new(&bmp, Point::new(0, 0));
+                // Display the image
+                image.draw(&mut display)?;
             },
             _ =>{},
         }
  
-        // Draw breaths remaining text
-        let est_remaining_text = format!("{} LEFT", remaining);
-        let est_remaining_text_block = Text::with_text_style(
-            &est_remaining_text,
-            Point::new(96, 47),
-            character_style,
-            text_style,
-        );
-        est_remaining_text_block.draw(&mut display)?;
-
-        // draw image over the top...
-        // let bmp: Bmp<BinaryColor> = Bmp::from_slice(include_bytes!("../assets/BridgeSource_64_128.bmp")).unwrap();
-        // let image = Image::new(&bmp, Point::new(0, 0));
-        // // Display the image
-        // image.draw(&mut display)?;
-
         window.update(&display);
 
-        // if window.events().any(|e| e == SimulatorEvent::Quit) {
-        //     break 'running Ok(());
-        // }
+        // Update timers
+        match current_state{
+            States::Startup =>{ startup_timer = startup_timer + 1;
+                                if startup_timer == 10{
+                                    current_state = States::Off;
+                                    startup_timer = 0;
+                                }
+                            },
+                            _ => {},
+        }
+
         thread::sleep(Duration::from_millis(50));
 
-        progress = (progress + 1) % 101;
     }
 }
